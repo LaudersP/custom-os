@@ -1,0 +1,13 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Build",
+            "type": "python",
+            "request": "launch",
+            "program": "make.py",
+            "console": "integratedTerminal",
+            "justMyCode": true
+        }
+    ]
+}
