@@ -8,16 +8,16 @@ __asm__(
 
 #include "kprintf.h"
 #include "utils.h"
+#include "serial.h"
 #include "console.h"
 
 struct MultibootInfo machineInfo;
 
+void sweet();
+
 void kmain(struct MultibootInfo* mbi) {
     // Desired output message
-    char* message = "We the People of the United States";
-
-    // Terminal print the message
-    // kprintf("%s", message);
+    // char* message = "We \rthe \nPeople \tof the United States";
     
     // Setup console data
     kmemcpy(&machineInfo, mbi, sizeof(struct MultibootInfo));
@@ -25,14 +25,20 @@ void kmain(struct MultibootInfo* mbi) {
     // Setup console graphics
     console_init(&machineInfo);
 
-    // Print the message graphically
-    for(int i = 0; message[i] != '\0'; i++)
-        // Draw each individual character
-        draw_character(message[i], 100 + (10 * i), 200);
-    
+    sweet();
 
-    // Serial output
-    kprintf("\nDONE\n");
+    // // Print the message graphically
+    // for(int i = 0; message[i] != '\0'; i++)
+    //     // Draw each character using serial_putc
+    //     console_putc(message[i]);
+
+    // Output done status
+    serial_putc('\n');
+    serial_putc('D');
+    serial_putc('O');
+    serial_putc('N');
+    serial_putc('E');
+    serial_putc('\n');
 
     // Dummy hold
     while(1)

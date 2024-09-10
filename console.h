@@ -1,5 +1,8 @@
 #pragma once
 
+#define COLUMNS 80
+#define ROWS 30
+
 void console_putc(char c);
 
 struct MultibootInfo;       //forward declaration

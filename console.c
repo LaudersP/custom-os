@@ -51,5 +51,59 @@ void draw_character(unsigned char ch, int x, int y) {
 }
 
 void console_putc(char c) { 
+    static int cc = 0;
+    static int cr = 0;
+
+    // Output to the terminal
     serial_putc(c);
+
+    // Act on the type of character
+    switch(c) {
+        case '\n':
+            cc = 0;
+            cr++;
+            break;
+
+        case '\r':
+            cc = 0;
+            break;\
+
+        case '\t':
+            cc += 8 - cc % 8;
+            break;
+
+        case '\f':
+            clear_screen();
+            cc = 0;
+            cr = 0;
+            break;
+
+        case '\e':
+            // TBD
+            break;
+
+        case '\x7f':
+            // Check that the cursor is not at x = 0, y = 0
+            if(cc != 0 && cr != 0)
+                cc--;
+            // Check if x = 0, return to end of previous line
+            else if(cc == 0 && cr != 0) {
+                cc = COLUMNS - 1;
+                cr--;
+            }
+            
+            draw_character(' ', cc * CHAR_WIDTH, cr * CHAR_HEIGHT);
+
+            break;
+
+        default:
+            draw_character(c, cc++ * CHAR_WIDTH, cr * CHAR_HEIGHT);
+            break;
+    };
+
+    // Check for column overflow
+    if(cc == COLUMNS) {
+        cc = 0;
+        cr++;
+    }
 }

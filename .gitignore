@@ -58,6 +58,6 @@ __pycache__/
 
 # Os Testing Files
 *.bmp
-testharness*.py
+test*.*
 *.zip
-bmputils.py
+bmputils*.py
