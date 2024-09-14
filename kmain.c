@@ -13,11 +13,11 @@ __asm__(
 
 struct MultibootInfo machineInfo;
 
-void sweet();
+void sweet_both();
 
 void kmain(struct MultibootInfo* mbi) {
     // Desired output message
-    // char* message = "We \rthe \nPeople \tof the United States";
+    // char* message = "We \rthe \nPeople \tof the \e[31mU\e[32mn\e[33mi\e[34mt\e[35me\e[36md\e[37m  \e[101mStates";
     
     // Setup console data
     kmemcpy(&machineInfo, mbi, sizeof(struct MultibootInfo));
@@ -25,12 +25,12 @@ void kmain(struct MultibootInfo* mbi) {
     // Setup console graphics
     console_init(&machineInfo);
 
-    sweet();
+    sweet_both();
 
-    // // Print the message graphically
+    // Print the message graphically
     // for(int i = 0; message[i] != '\0'; i++)
-    //     // Draw each character using serial_putc
-    //     console_putc(message[i]);
+        // // Draw each character using serial_putc
+        // console_putc(message[i]);
 
     // Output done status
     serial_putc('\n');

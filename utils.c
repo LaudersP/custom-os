@@ -15,7 +15,7 @@ void kmemcpy(void* dest, const void* src, unsigned size) {
     char* dp = (char*) dest;
     char* sp = (char*) src;
 
-    // Loop through the memory locationsusing the size variable
+    // Loop through the memory locations using the size variable
     // ... decreases the size argument once each iteration until size = 0
     while(size--) {
         // Copy the src memory data to the dest memory location

@@ -23,3 +23,8 @@ void serial_putc(char c) {
     
     outb(SERIAL_DATA, c);
 }
+
+void serial_puts(const char* str) {
+    for(int i = 0; str[i] != '\0'; i++)
+        serial_putc(str[i]);
+}

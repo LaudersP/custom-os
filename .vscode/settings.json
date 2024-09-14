@@ -2,6 +2,8 @@
     "files.associations": {
         "console.h": "c",
         "utils.h": "c",
-        "etec3701_10x20.h": "c"
+        "etec3701_10x20.h": "c",
+        "kprintf.h": "c",
+        "serial.h": "c"
     }
 }
