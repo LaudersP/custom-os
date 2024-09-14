@@ -270,13 +270,8 @@ void scroll_console() {
         pitch * (600 - CHAR_HEIGHT)
     );
 
-    // Clear the bottom line
-    volatile u8* f8 = framebuffer + (height - CHAR_HEIGHT) * pitch;
-    for(unsigned y = 0; y < CHAR_HEIGHT; y++) {
-        volatile u16* f16 = (volatile u16*) f8;
-        for(unsigned x = 0; x < width; x++) {
-            f16[x] = backgroundColor;
-        }
-        f8 += pitch;
-    }
+    // Clear bottom console row
+    for(unsigned y = (height - CHAR_HEIGHT); y < height; y++)
+        for(unsigned x = 0; x < width; x++)
+            set_pixel(x, y, backgroundColor);
 }
