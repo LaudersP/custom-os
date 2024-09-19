@@ -95,8 +95,8 @@ void console_putc(char c) {
     static int cc = 0;
     static int cr = 0;
 
-    // Output to the terminal
-    // serial_putc(c);
+    // Output to the terminal (Debugging purposes)
+    serial_putc(c);
 
     // Check if the screen needs to be scrolled
     if(cr == 30) {

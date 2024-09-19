@@ -2,6 +2,7 @@
 
 #include "serial.h"
 #include "utils.h"
+#include "console.h"
 
 // 0x3fd: Tells status of serial port (ready for reads/writes)
 #define SERIAL_STATUS 0x3fd

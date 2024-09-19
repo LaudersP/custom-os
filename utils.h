@@ -1,6 +1,13 @@
 #pragma once
 #pragma pack(push, 1)
 
+#define u8_LOW_MASK 0x0F
+#define u8_HIGH_MASK 0xF0
+#define u16_LOW_MASK 0x00FF
+#define u16_HIGH_MASK 0xFF00
+#define u32_LOW_MASK 0x0000FFFF
+#define u32_HIGH_MASK 0xFFFF0000
+
 typedef unsigned char u8;
 typedef unsigned short u16;
 typedef unsigned int u32;

@@ -10,27 +10,23 @@ __asm__(
 #include "utils.h"
 #include "serial.h"
 #include "console.h"
+#include "interrupt.h"
 
 struct MultibootInfo machineInfo;
 
-void sweet_both();
+void sweet();
 
 void kmain(struct MultibootInfo* mbi) {
-    // Desired output message
-    // char* message = "We \rthe \nPeople \tof the \e[31mU\e[32mn\e[33mi\e[34mt\e[35me\e[36md\e[37m  \e[101mStates";
-    
     // Setup console data
     kmemcpy(&machineInfo, mbi, sizeof(struct MultibootInfo));
 
     // Setup console graphics
     console_init(&machineInfo);
 
-    sweet_both();
+    // Initialize interrupts
+    interrupt_init();
 
-    // Print the message graphically
-    // for(int i = 0; message[i] != '\0'; i++)
-        // // Draw each character using serial_putc
-        // console_putc(message[i]);
+    sweet();
 
     // Output done status
     serial_putc('\n');
