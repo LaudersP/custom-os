@@ -22,3 +22,7 @@ void kmemcpy(void* dest, const void* src, unsigned size) {
         *dp++ = *sp++;
     }
 }
+
+void halt() {
+    __asm__ volatile("hlt");
+}

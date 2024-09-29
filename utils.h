@@ -113,3 +113,5 @@ void outb(u16 port, u8 value);
 u8 inb(u16 port);
 
 void kmemcpy(void* dest, const void* start, unsigned size);
+
+void halt();

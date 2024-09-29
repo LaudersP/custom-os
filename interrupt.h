@@ -1,6 +1,7 @@
 #pragma pack(push, 1)
 
 #include "utils.h"
+#include "timer.h"
 
 #define SEGMENT_PRESENT 0x80
 #define SEGMENT_RING_0 0x00
@@ -61,5 +62,27 @@ void interrupt_init();
 void gdt_init();
 void idt_inti();
 void highlevel_handler(struct InterruptContext* ctx);
+
+#define MAX_HANDLERS 4
+
+typedef void (*InterruptHandler)(struct InterruptContext* ctx);
+
+// Handler for each interrupt/exception from 0...49; up to 4 handlers per interrupt
+static InterruptHandler handlers[NUM_INTERRUPTS][MAX_HANDLERS];
+
+void panic(const char *);
+void register_interrupt_handler(unsigned interrupt, InterruptHandler func);
+void panic2(void* eip, const char* msg);
+
+void divideByZero(struct InterruptContext* ctx);
+void illegalOpcode(struct InterruptContext* ctx);
+void generalFault(struct InterruptContext* ctx);
+
+void ackPic1(struct InterruptContext* ctx);
+void ackPic2(struct InterruptContext* ctx);
+void interrupt_enable();
+
+void timer0Handler(struct InterruptContext* ctx);
+void timerHandler(struct InterruptContext* ctx);
 
 #pragma pack(pop)

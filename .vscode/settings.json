@@ -4,6 +4,8 @@
         "utils.h": "c",
         "etec3701_10x20.h": "c",
         "kprintf.h": "c",
-        "serial.h": "c"
+        "serial.h": "c",
+        "memory.h": "c",
+        "linked_list.h": "c"
     }
 }

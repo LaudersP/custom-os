@@ -275,3 +275,8 @@ void scroll_console() {
         for(unsigned x = 0; x < width; x++)
             set_pixel(x, y, backgroundColor);
 }
+
+void console_invert_pixel(unsigned x, unsigned y) {
+    volatile u16* p = (volatile u16*)(framebuffer + (y*pitch + x*2));
+    *p ^= 0xffff;
+}

@@ -1,5 +1,6 @@
 #include "interrupt.h"
 #include "kprintf.h"
+#include "console.h"
 
 // Midlevel handler assembly code
 asm (
@@ -37,6 +38,31 @@ void interrupt_init() {
     lidt.size = sizeof(idt);
     lidt.addr = idt;
     asm volatile("lidt (%%eax)" : : "a"(&lidt));
+
+    // Setup PIC #1
+    outb(0x20, 0x11);   // Tell PIC #1 to go into setup
+    outb(0x21, 32);     // Remapping (0 -> 32)
+    outb(0x21, 4);      // Set PIC #1 to primary PIC
+    outb(0x21, 1);      // Set 8086 for bus communications
+    outb(0x21, 0);      // Enable all 8 IRQ lines
+
+    // Setup PIC #2
+    outb(0xa0, 0x11);   // Tell PIC #2 to go into setup
+    outb(0xa1, 40);     // Remapping (8 -> 40)
+    outb(0xa1, 2);      // Set PIC #2 to secondary PIC
+    outb(0xa1, 1);      // Set 8086 for bus communications
+    outb(0xa1, 0);      // Enable all 8 IRQ lines
+
+    register_interrupt_handler(0, divideByZero);
+    register_interrupt_handler(6, illegalOpcode);
+    register_interrupt_handler(13, generalFault);
+    register_interrupt_handler(40, timerHandler);
+
+    for(int i=32;i<40;++i)
+        register_interrupt_handler(i,ackPic1);
+
+    for(int i=40;i<48;++i)
+        register_interrupt_handler(i,ackPic2);
 }
 
 // Initializes the Global Descriptor Table
@@ -83,19 +109,19 @@ void gdt_init() {
     lgdt.addr = &gdt[0];
     void* tmp = &lgdt;
     asm volatile (
-         "lgdt (%%eax)\n"       //load gdt register
-         "mov $16,%%eax\n"      //set eax to 16: Offset to gdt[2]
-         "mov %%eax,%%ds\n"     //store 16 to ds
-         "mov %%eax,%%es\n"     //store 16 to es
-         "mov %%eax,%%fs\n"     //store 16 to fs
-         "mov %%eax,%%gs\n"     //store 16 to gs
-         "mov %%eax,%%ss\n"     //store 16 to ss
-         "jmpl $0x8,$reset_cs\n"    //Intel says we must do a jmp here
-         "reset_cs:\n"
-         "nop\n"                //no operation
-         : "+a"(tmp)
-         :
-         : "memory"
+        "lgdt (%%eax)\n"       //load gdt register
+        "mov $16,%%eax\n"      //set eax to 16: Offset to gdt[2]
+        "mov %%eax,%%ds\n"     //store 16 to ds
+        "mov %%eax,%%es\n"     //store 16 to es
+        "mov %%eax,%%fs\n"     //store 16 to fs
+        "mov %%eax,%%gs\n"     //store 16 to gs
+        "mov %%eax,%%ss\n"     //store 16 to ss
+        "jmpl $0x8,$reset_cs\n"    //Intel says we must do a jmp here
+        "reset_cs:\n"
+        "nop\n"                //no operation
+        : "+a"(tmp)
+        :
+        : "memory"
     );
 }
 
@@ -112,100 +138,85 @@ void idt_inti() {
 }
 
 void highlevel_handler(struct InterruptContext* ctx) {
-    switch (ctx->interruptNumber) {
-        case 0:
-            kprintf("Divide by zero\n");
-            break;
-        case 1:
-            kprintf("Debug\n");
-            break;
-        case 2:
-            kprintf("Hardware\n");
-            break;
-        case 3:
-            kprintf("Breakpoint\n");
-            break;
-        case 4:
-            kprintf("Overflow\n");
-            break;
-        case 5:
-            kprintf("Bound exceeded\n");
-            break;
-        case 6:
-            kprintf("Undefined opcode\n");
-            break;
-        case 7:
-            kprintf("No coprocessor\n");
-            break;
-        case 8:
-            kprintf("Double fault\n");
-            break;
-        case 10:
-            kprintf("Invalid TSS\n");
-            break;
-        case 11:
-            kprintf("Segment absent\n");
-            break;
-        case 12:
-            kprintf("Stack fault\n");
-            break;
-        case 13:
-            kprintf("General fault\n");
-            break;
-        case 14:
-            kprintf("Page fault\n");
-            break;
-        case 16:
-            kprintf("Math fault\n");
-            break;
-        case 17:
-            kprintf("Alignment error\n");
-            break;
-        case 18:
-            kprintf("Machine check\n");
-            break;
-        case 19:
-            kprintf("SIMD error\n");
-            break;
-        case 20:
-            kprintf("Virtual error\n");
-            break;
-        case 21:
-            kprintf("Control error\n");
-            break;
-        case 9:
-        case 15:    
-        case 22:
-        case 23:
-        case 24:
-        case 25:
-        case 26:
-        case 27:
-        case 28:
-        case 29:
-        case 30:
-        case 31:
-            kprintf("Reserved\n");
-            break;
-        case 32:
-        case 33:
-        case 34:
-        case 35:
-        case 36:
-        case 37:
-        case 38:
-        case 39:
-        case 40:
-        case 41:
-        case 42:
-        case 43:
-        case 44:
-        case 45:
-        case 46:
-        case 47:
-        case 48:
-        case 49:
-            kprintf("Hardware/User\n");
-            break;
+    int handled=0;
+    unsigned interruptNumber = ctx->interruptNumber;
+
+    for(int i=0;i<MAX_HANDLERS;++i){
+        if( handlers[interruptNumber][i] ){
+            handlers[interruptNumber][i](ctx);
+            handled=1;
+        }
     }
+
+    if(!handled){
+        kprintf("Warning: Unhandled interrupt: %d\n",interruptNumber);
+    }
+}
+
+__asm__(    
+    ".global _panic\n"
+    "_panic:\n"
+    "mov (%esp),%eax\n"     //eip -> eax
+    "mov 4(%esp),%edx\n"    //string parameter
+    "push %edx\n"
+    "push %eax\n"
+    "call _panic2\n"
+);
+
+void register_interrupt_handler(unsigned interrupt, InterruptHandler func) {
+    if( interrupt >= NUM_INTERRUPTS )
+        panic("Bad interrupt number\n");
+
+    for(int i=0;i<MAX_HANDLERS;++i){
+        if( !handlers[interrupt][i] ){
+            handlers[interrupt][i] = func;
+            return;
+        }
+    }
+
+    panic("Too many handlers!\n");
+}
+
+void panic2(void* eip, const char* msg) {
+    kprintf("Kernel panic: At eip=%p: %s\n", eip,msg);
+
+    while(1)
+        __asm__("hlt");
+}
+
+void divideByZero(struct InterruptContext* ctx) {
+    kprintf("Divide by zero\n");
+}
+
+void illegalOpcode(struct InterruptContext* ctx) {
+    kprintf("Undefined opcode\n");
+}
+
+void generalFault(struct InterruptContext* ctx) {
+    kprintf("General fault\n");
+}
+
+void ackPic1(struct InterruptContext* ctx) {
+    outb( 0x20, 32 );
+}
+
+void ackPic2(struct InterruptContext* ctx) {
+    outb( 0x20, 32 );
+    outb( 0xa0, 32 );
+}
+
+void interrupt_enable() {
+    asm volatile ("sti");
+}
+
+// Interrupt testing function
+void timer0Handler(struct InterruptContext* ctx) {
+    console_invert_pixel(400,300);
+}
+
+void timerHandler(struct InterruptContext* ctx) {
+    outb(0x70, 0xc);
+    inb(0x71);
+    
+    increase_clock_ticks();
 }
