@@ -1,7 +1,21 @@
-#pragma once
+#if __STDC_HOSTED__
+    #include <stdint.h>
+    #include <stddef.h>
+    typedef uint32_t u32;
+#else
+    #include "utils.h"
+    #define NULL ((void*)0)
+#endif
 
-#include "utils.h"
-#include "kprintf.h"
+#if __STDC_HOSTED__
+char heap[524288];
+#else
+char* heap = (char*)0x10000;
+#endif
+
+#define HEAP_ORDER 19
+
+typedef uint32_t u32;
 
 typedef struct Header_{
     u32 used: 1,
@@ -10,24 +24,27 @@ typedef struct Header_{
         next: 13;
 } Header;
 
-// Global variables
-static char* heap = (char*) 0x10000;    // Location of beginning of stack
-#define HEAP_ORDER 19                   // 2^19 = 512MB
-Header* freeList[HEAP_ORDER+1];         // List to track the free list of memory heaps
+struct MB_MemInfo{
+    u32 size;
+    u32 addr;
+    u32 length;
+    u32 type;
+    u32 attributes;
+};
+struct MB_MemoryMapping{
+    u32 length;
+    struct MB_MemInfo* addr;
+};
+struct MultibootInfo{
+    struct MB_MemoryMapping map;
+};
 
+Header* freeList[HEAP_ORDER+1];
 
-void memory_init(struct MultibootInfo* info);
-static void initHeader(Header* h, unsigned order);
-static Header* getNext(Header* h);
-static void setNext(Header* h, Header* next);
-static void setPrev(Header* h, Header* prev);
-static void addToFreeList(Header* h);
-
-static unsigned roundUpToPowerOf2(unsigned needed_bytes );
-static void splitBlockOfOrder(unsigned i);
-static Header* removeFromFreeList(unsigned i);
+void memory_init();
+void initHeader(Header* h, unsigned order);
 void* kmalloc(u32 size);
-
-static Header* getBuddy(Header* h);
-static Header* combine(Header* h, Header* b);
-void kfree(void* v);
+void addToFreeList(Header* h);
+Header* removeFromFreeList(unsigned i);
+void removeThisNodeFromFreeList(Header* h);
+void splitBlockOfOrder(unsigned i);

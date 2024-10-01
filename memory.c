@@ -1,31 +1,9 @@
 #include "memory.h"
 
-#define NULL ((void*)0)
-
-void memory_init(struct MultibootInfo* info) {
-    // Number of memory regions
-    u32 nr = info->map.length / sizeof(struct MB_MemInfo);
-    kprintf("Num regions: %d\n",nr);
-
-    struct MB_MemInfo* M = info->map.addr;
-
-    for(int i=0;i<nr;++i){
-        u32 end = M[i].addr+M[i].length;
-        kprintf("Region %d: addr=0x%08x...0x%08x length=%dKB type=%s\n",
-            i,
-            M[i].addr,
-            end-1,
-            M[i].length/1024,
-            (M[i].type == 1) ? "RAM" : "Reserved"
-        );
-    }
-}
-
-static void initHeader(Header* h, unsigned order){
-    h->used=0;
-    h->order = order;
-    setNext(h,NULL);
-    setPrev(h,NULL);
+void memory_init() {
+    Header* initialBlock = (Header*)heap;
+    initHeader(initialBlock, HEAP_ORDER);
+    freeList[HEAP_ORDER] = initialBlock;
 }
 
 static Header* getNext(Header* h) {
@@ -45,6 +23,14 @@ static void setNext(Header* h, Header* next ) {
     h->next = delta;
 }
 
+static Header* getPrev(Header* h) {
+    unsigned delta = (h->prev) << 6;
+    Header* h2 = (Header*)(heap + delta);
+    if(h == h2)
+        return NULL;
+    return h2;
+}
+
 static void setPrev(Header* h, Header* prev ) {
     if( prev == NULL )
         prev = h;
@@ -54,55 +40,84 @@ static void setPrev(Header* h, Header* prev ) {
     h->prev = delta;
 }
 
-Header* removeFromFreeList(unsigned i) {
-    // Check if there is an available block of memory
-    if (!freeList[i])
-        return NULL;
-
-    // Get the first element in the free list 
-    Header* h = freeList[i];
-
-    // Remove the element from the free list
-    Header* next = getNext(h);
-    if(next != NULL)
-        setPrev(next, NULL);
-    
-    freeList[i] = next;
-
-    // Clear the header pointers from the removed block
-    setNext(h, NULL);
-    setPrev(h, NULL);
-
-    return h;
+void initHeader(Header* h, unsigned order){
+    h->used=0;
+    h->order = order;
+    setNext(h,NULL);
+    setPrev(h,NULL);
 }
 
 void addToFreeList(Header *h) {
     // Get the order
     unsigned order = h->order;
 
-    // Check if the list is empty
-    if(!freeList[order]) {
-        freeList[order] = h;
-        setNext(h, NULL);
-        setPrev(h, NULL);
-    } else {
-        Header* head = freeList[order];
-        setNext(h, head);
-        setPrev(head, h);
-        setPrev(h, NULL);
+    // Set the next pointer
+    setNext(h, freeList[order]);
 
-        // Update the head of the list
-        freeList[order] = h;
-    }
+    // Check to see if the order is used
+    if(freeList[order] != NULL)
+        // Set the previous pointer
+        setPrev(freeList[order], h);
+
+    // Set the new head of the free list to h
+    freeList[order] = h;
+
+    // Set the previous pointer of h
+    setPrev(h, NULL);
 }
 
-static void splitBlockOfOrder(unsigned i) {
+Header* removeFromFreeList(unsigned i) {
+    Header* h = freeList[i];
+
+    // Check if the list is empty
+    if (h == NULL) {
+        return NULL;
+    }
+
+    // Set head of the free list to the next block
+    freeList[i] = getNext(h);
+
+    // Check for a new head exists
+    if (freeList[i] != NULL) {
+        // Set its prev pointer to NULL
+        setPrev(freeList[i], NULL);
+    }
+
+    // Clear the pointers of the removed block
+    setNext(h, NULL);
+    setPrev(h, NULL);
+
+    return h;
+}
+
+void removeThisNodeFromFreeList(Header* h){
+    unsigned order = h->order;
+
+    // Check if the node is the head of the list
+    if (freeList[order] == h) {
+        freeList[order] = getNext(h);
+    }
+
+    // Update next and prev pointers
+    if (getNext(h)) {
+        setPrev(getNext(h), getPrev(h));
+    }
+    if (getPrev(h)) {
+        setNext(getPrev(h), getNext(h));
+    }
+
+    // Clear the pointers
+    setNext(h, NULL);
+    setPrev(h, NULL);
+}
+
+void splitBlockOfOrder(unsigned i) {
     // Take block off freeList[i]
     Header* h = removeFromFreeList(i);
 
     // Split it in half
     h->order--;
-    Header* h2 = (Header*)((char*)h) + (1 << (h->order));
+    Header* h2 = (Header *)((char *)h + (1 << (h->order)));
     initHeader(h2, h->order);
     
     // Add two to freeList
@@ -123,10 +138,6 @@ void* kmalloc(u32 size) {
     // Add the bytes used for the header
     size += sizeof(Header);
 
-    // Round up to the next power of two
-    size = roundUpToPowerOf2(size);
-
-    // PSEUDO CODE
     // Order I want
     unsigned o = 6;
 
@@ -146,7 +157,8 @@ void* kmalloc(u32 size) {
 
     // Split the freelist map
     while(i > o) {
-        splitBlockOfOrder(i--);
+        splitBlockOfOrder(i);
+        i--;
     }
 
     Header* h = removeFromFreeList(o);
@@ -154,13 +166,13 @@ void* kmalloc(u32 size) {
     return ((char*)h + sizeof(Header));
 }
 
-
 Header* getBuddy(Header *h) {
-    u32 delta = ((char*)h) - heap;  // heapStart?
+    char* c = (char*) h;
+    unsigned offset = c - heap;
 
-    // Flip bit h->order
-    delta = delta^(1 << h->order);
-    return (Header*)(heap + delta);
+    offset = offset ^ (1 << h->order);
+
+    return (Header*)(heap + offset);
 }
 
 Header* combine(Header* h, Header* b) {
@@ -184,7 +196,13 @@ void kfree(void* v) {
             return;     //entire heap is free
         Header* b = getBuddy(h);
         if( b->used == 0 && b->order == h->order ){
-            combine(h, b);
+            removeThisNodeFromFreeList(h);
+            removeThisNodeFromFreeList(b);
+            if(h > b)
+                h=b;
+
+            h->order++;
+            addToFreeList(h);
         } else {
             return;     //done
         }
