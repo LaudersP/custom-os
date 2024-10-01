@@ -1,3 +1,4 @@
+#pragma once
 #pragma pack(push, 1)
 
 #include "utils.h"
