@@ -1,5 +1,8 @@
 #include "memory.h"
 
+char* heap = (char*)0x10000;
+Header* freeList[HEAP_ORDER+1];
+
 void memory_init() {
     Header* initialBlock = (Header*)heap;
     initHeader(initialBlock, HEAP_ORDER);
