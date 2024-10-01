@@ -6,6 +6,8 @@
         "kprintf.h": "c",
         "serial.h": "c",
         "memory.h": "c",
-        "linked_list.h": "c"
+        "linked_list.h": "c",
+        "pic.h": "c",
+        "disk.h": "c"
     }
 }

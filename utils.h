@@ -8,6 +8,8 @@
 #define u32_LOW_MASK 0x0000FFFF
 #define u32_HIGH_MASK 0xFFFF0000
 
+#define NULL ((void*)0)
+
 typedef unsigned char u8;
 typedef unsigned short u16;
 typedef unsigned int u32;
@@ -115,3 +117,21 @@ u8 inb(u16 port);
 void kmemcpy(void* dest, const void* start, unsigned size);
 
 void halt();
+
+u16 inw(u16 port);
+void outw(u16 port, u16 value);
+u32 inl(u16 port);
+void outl(u16 port, u32 value);
+
+struct QueueNode{
+    struct QueueNode* next;
+    void* item;
+};
+
+struct Queue{
+    struct QueueNode* head;
+    struct QueueNode* tail;
+};
+
+int queue_put(struct Queue* Q, void* data);
+void* queue_get(struct Queue* Q);

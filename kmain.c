@@ -12,6 +12,7 @@ __asm__(
 #include "console.h"
 #include "interrupt.h"
 #include "timer.h"
+#include "disk.h"
 
 struct MultibootInfo machineInfo;
 
@@ -30,6 +31,12 @@ void kmain(struct MultibootInfo* mbi) {
     // Enable the timer
     timer_init(12);
 
+    // Enable memory
+    memory_init();
+
+    // Enable to disk system
+    disk_init();
+
     // Enable interrupts
     interrupt_enable();
 
@@ -37,5 +44,5 @@ void kmain(struct MultibootInfo* mbi) {
 
     // Dummy hold
     while(1)
-        __asm__("hlt");
+        halt();
 }
