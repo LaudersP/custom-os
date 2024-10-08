@@ -18,6 +18,12 @@ struct MultibootInfo machineInfo;
 
 void sweet();
 
+void kmain2() {
+    kprintf("START\n");
+
+    readRoot();
+}
+
 void kmain(struct MultibootInfo* mbi) {
     // Setup console data
     kmemcpy(&machineInfo, mbi, sizeof(struct MultibootInfo));
@@ -40,9 +46,10 @@ void kmain(struct MultibootInfo* mbi) {
     // Enable interrupts
     interrupt_enable();
 
-    sweet();
+    // Responsible for reading out our VBR
+    disk_read_metadata(kmain2);
 
-    // Dummy hold
-    while(1)
+    while(1){
         halt();
+    }
 }

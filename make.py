@@ -63,7 +63,28 @@ run( [link] + linkflags + objectfiles )
 run( [
     python, "fool.pyz", "hd.img",
     "create","64",
-    "cp","kernel.exe","KERNEL.EXE"
+    "cp","kernel.exe","KERNEL.EXE",
+
+    #begin new stuff
+    "cp","article1.txt","ARTICLE1.TXT",
+    "cp","article2.txt","ARTICLE2.TXT",
+    "cp","article3.txt","ARTICLE3.TXT",
+    "cp","article4.txt","ARTICLE4.TXT",
+    "cp","article5.txt","ARTICLE5.TXT",
+    "cp","article6.txt","ARTICLE6.TXT",
+    "cp","article7.txt","ARTICLE7.TXT",
+    "cp","billofrights.txt","bill of rights.txt",
+    "cp","amendment1.txt","AMEND1.TXT",
+    "cp","amendment2.txt","amendment2.TXT",
+    "cp","amendment3.txt","amendment 3.TXT",
+    "cp","amendment4.txt","AMEND4.TXT",
+    "cp","amendment5.txt","AMEND5.TXT",
+    "cp","amendment6.txt","amend. 6.TXT",
+    "cp","amendment7.txt","a7.TXT",
+    "cp","amendment8.txt","8th amendment.txt",
+    "cp","amendment9.txt","AMEND 9.txt",
+    "cp","amendment10.txt","10.TXT"
+    #end new stuff
 ])
 
 # Run Qemu
