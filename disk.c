@@ -248,7 +248,7 @@ void disk_read_metadata( disk_metadata_callback_t kmain_callback ) {
     disk_read_sectors( 2, 1, read_partition_table_callback, kmain_callback );
 }
 
-u32 clusterNumberToSectorNumber( u32 clnum ) {
+u32 clusterNumberToSectorNumber(u32 clnum) {
     // Ensure that the clnum is greater than two
     if(clnum < 2)
         panic("Bad cluster!");
@@ -260,16 +260,105 @@ u32 clusterNumberToSectorNumber( u32 clnum ) {
     return clusterStart + (clnum - 2) * vbr.sectors_per_cluster;
 }
 
-static void callback(int errorCode, void* vdata, void* callback) {
-    if(errorCode) {
-        kprintf("ERROR: %d\n", errorCode);
+static void parseFilename(struct DirEntry* entry, char* buffer) {
+    unsigned bufferCharCout = 0;
+
+    // Iterate through the filename
+    for(int i = 0; i < 8; i++) {
+        // Get the filename character
+        if(entry->base[i] != '\0' && entry->base[i] != ' ')
+            buffer[bufferCharCout++] = entry->base[i];
+    } 
+
+    // Add the period
+    buffer[bufferCharCout++] = '.';
+
+    // Iterate through the file extension
+    for(int i = 0; i < 3; i++) {
+        // Get the extension character
+        if(entry->ext[i] != '\0' && entry->base[i] != ' ')
+            buffer[bufferCharCout++] = entry->ext[i];
+    }
+
+    // Padd the end of the buffer
+    while(bufferCharCout < 13) {
+         buffer[bufferCharCout++] = ' ';
+    }
+
+    // End the buffer
+    buffer[--bufferCharCout] = '\0';
+}
+
+// Root Directory items
+static void listFiles(int errorCode, void* buffer, void* callback) {   // FUTURE: callback -> filename
+    // Check for a read error
+    if(errorCode != SUCCESS) {
+        panic("ERROR!");
         return;
     }
 
-    char* data = (char*)vdata;
+    // Print the header
+    kprintf("                  Cluster\n");
+    kprintf("Filename      Size   |    Modified                Long name\n");
+    kprintf("-------------------------------------------------------------------------------\n");
 
-    for(int i = 0; i < 512; i++) {
-        kprintf("%c", data[i]);
+    // Cast to the buffer
+    struct DirEntry* de = (struct DirEntry*)buffer;
+
+    // Iterate through the directory entries
+    for(int i = 0; i < 128; i++) {
+        // Check if the iteration is at the end of de
+        if(de[i].base[0] == 0)
+            break;
+
+        // Check if the iteration is on a deleted file
+        if((unsigned char)de[i].base[0] == 0xe5)
+            continue;
+
+        // Check if the iteration is on a long filenamed file
+        if((unsigned)de[i].attributes == 15) {
+            // Process here
+        }
+        else {
+            // Create a name buffer
+            char filenameBuffer[13];
+            for(int i = 0; i < 13; i++)
+                filenameBuffer[i] = '\0';
+
+            // Get the no spaced filename
+            parseFilename(&de[i], filenameBuffer);
+
+            // Get the modified date
+            unsigned short year = ((de[i].lastModifiedDate >> 9) & 0x7F) + 1980;
+            unsigned short month = (de[i].lastModifiedDate >> 5) & 0x0f;
+            unsigned short day = de[i].lastModifiedDate & 0x1F;
+
+            // Get the modified time
+            unsigned short hour = ((de[i].lastModifiedTime >> 11) & 0x1F);
+            unsigned short minute = ((de[i].lastModifiedTime >> 5) & 0x3F);
+            unsigned short second = de[i].lastModifiedTime & 0x3F;
+
+            // Check the hour
+            char hourType[3];
+            if(hour > 12) {
+                hour -= 12;
+                hourType[0] = 'P';
+                hourType[1] = 'M';
+                hourType[2] = '\0';
+            } else {
+                hourType[0] = 'A';
+                hourType[1] = 'M';
+                hourType[2] = '\0';
+            }
+
+            // Get the cluster number
+            unsigned int clusterNumber = (de[i].clusterHigh << 16) | de[i].clusterLow;
+        
+            // Print the returned buffer
+            kprintf("%-12s %6d %4d  %02d/%02d/%04d %2d:%02d:%02d %s  [None]\n", 
+                filenameBuffer, de[i].size, clusterNumber, 
+                month, day, year, hour, minute, second, hourType);
+        }
     }
 
     kprintf("\nDONE\n");
@@ -280,5 +369,5 @@ void readRoot() {
     u32 rootSectorNum = clusterNumberToSectorNumber(vbr.root_cluster);
 
     // Read the root sector
-    disk_read_sectors(rootSectorNum, 1, callback, 0);
+    disk_read_sectors(rootSectorNum, 2, listFiles, 0);
 }

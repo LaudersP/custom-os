@@ -19,7 +19,7 @@ struct MultibootInfo machineInfo;
 void sweet();
 
 void kmain2() {
-    kprintf("START\n");
+    kprintf("\nSTART\n");
 
     readRoot();
 }
