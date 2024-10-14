@@ -289,6 +289,21 @@ static void parseFilename(struct DirEntry* entry, char* buffer) {
     buffer[--bufferCharCout] = '\0';
 }
 
+static unsigned len(char* string) {
+    unsigned length = 0;
+
+    while(string[length] != '\0')
+        length++;
+     
+    return length;
+}
+
+// String to hold the reversed long filename
+static char longFilenameReversed[30];
+
+// Variable to hold the current position inside of the reversed long file name
+static unsigned longFilenameReverseIndex = 0;
+
 // Root Directory items
 static void listFiles(int errorCode, void* buffer, void* callback) {   // FUTURE: callback -> filename
     // Check for a read error
@@ -299,31 +314,40 @@ static void listFiles(int errorCode, void* buffer, void* callback) {   // FUTURE
 
     // Print the header
     kprintf("                  Cluster\n");
-    kprintf("Filename      Size   |    Modified                Long name\n");
+    kprintf("Filename      Size   |    Modified              Long name\n");
     kprintf("-------------------------------------------------------------------------------\n");
 
     // Cast to the buffer
     struct DirEntry* de = (struct DirEntry*)buffer;
 
+    // Initialize the reversed long filename
+    for(int i = 0; i < 100; i++)
+        longFilenameReversed[i] = '\0';
+
+    // Initialize reversed long filename to none
+    longFilenameReversed[0] = ']';
+    longFilenameReversed[1] = 'e';
+    longFilenameReversed[2] = 'n';
+    longFilenameReversed[3] = 'o';
+    longFilenameReversed[4] = 'N';
+    longFilenameReversed[5] = '[';
+
     // Iterate through the directory entries
     for(int i = 0; i < 128; i++) {
         // Check if the iteration is at the end of de
-        if(de[i].base[0] == 0)
+        if(de[i].base[0] == 0x00)
             break;
 
         // Check if the iteration is on a deleted file
         if((unsigned char)de[i].base[0] == 0xe5)
             continue;
 
-        // Check if the iteration is on a long filenamed file
-        if((unsigned)de[i].attributes == 15) {
-            // Process here
-        }
-        else {
+        // Skip long filenames
+        if(de[i].attributes != 0x0f) {
             // Create a name buffer
             char filenameBuffer[13];
-            for(int i = 0; i < 13; i++)
-                filenameBuffer[i] = '\0';
+            for(int j = 0; j < 13; j++)
+                filenameBuffer[j] = '\0';
 
             // Get the no spaced filename
             parseFilename(&de[i], filenameBuffer);
@@ -353,11 +377,69 @@ static void listFiles(int errorCode, void* buffer, void* callback) {   // FUTURE
 
             // Get the cluster number
             unsigned int clusterNumber = (de[i].clusterHigh << 16) | de[i].clusterLow;
+
+            // Get the length of the long filename
+            unsigned longFilenameLength = len(longFilenameReversed);
+
+            // Reverse the longFilenameLength
+            char longFilename[100];
+            for(int i = 0; i < 100; i++)
+                longFilename[i] = '\0';
+
+            int p1 = 0;
+            int p2 = longFilenameLength - 1;
+            while(p2 >= 0) {
+                longFilename[p1] = longFilenameReversed[p2];
+                p1++;
+                p2--;
+            }
         
             // Print the returned buffer
-            kprintf("%-12s %6d %4d  %02d/%02d/%04d %2d:%02d:%02d %s  [None]\n", 
-                filenameBuffer, de[i].size, clusterNumber, 
-                month, day, year, hour, minute, second, hourType);
+            kprintf("%-12s %6d %4d  %02d/%02d/%04d%2d:%02d:%02d%s  %s\n",
+                filenameBuffer, de[i].size, clusterNumber,
+                month, day, year, hour, minute, second, hourType, longFilename);
+
+            // Reset the reversed long filename
+            for(int i = 0; i < 100; i++)
+                longFilenameReversed[i] = '\0';
+
+            // Reset the reversed long filename to none
+            longFilenameReversed[0] = ']';
+            longFilenameReversed[1] = 'e';
+            longFilenameReversed[2] = 'n';
+            longFilenameReversed[3] = 'o';
+            longFilenameReversed[4] = 'D';
+            longFilenameReversed[5] = '[';
+
+            // Reset the reversed long filename index to 0
+            longFilenameReverseIndex = 0;
+        }
+        else {
+            // Construct the lfn entry
+            struct LFNEntry* lfn = (struct LFNEntry*)&de[i];
+
+            // Add the namen backwards to the reversed long filename
+            for(int i = 3; i >= 0; i--) {
+                // Skip the null character
+                if(lfn->name2[i] != 0x0000 && lfn->name2[i] != -1)
+                    // kprintf("%c", lfn->name2[i]);
+                    longFilenameReversed[longFilenameReverseIndex++] = lfn->name2[i];
+            }
+
+            for(int i = 11; i >= 0; i--) {
+                // Skip the null character
+                if(lfn->name1[i] != 0x0000 && lfn->name1[i] != -1)
+                    // kprintf("%c", lfn->name1[i]);
+                    longFilenameReversed[longFilenameReverseIndex++] = lfn->name1[i];
+            }
+
+            for(int i = 9; i >= 0; i--) {
+                // Skip the null character
+                if(lfn->name0[i] != 0x0000 && lfn->name0[i] != -1)
+                    // kprintf("%c", lfn->name0[i]);
+                    longFilenameReversed[longFilenameReverseIndex++] = lfn->name0[i];
+            }
+            longFilenameReversed[longFilenameReverseIndex] = '\0';
         }
     }
 
