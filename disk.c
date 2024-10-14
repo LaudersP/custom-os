@@ -313,8 +313,7 @@ static void listFiles(int errorCode, void* buffer, void* callback) {   // FUTURE
     }
 
     // Print the header
-    kprintf("                  Cluster\n");
-    kprintf("Filename      Size   |    Modified              Long name\n");
+    kprintf("Filename      Size   Modified                Long name\n");
     kprintf("-------------------------------------------------------------------------------\n");
 
     // Cast to the buffer
@@ -375,9 +374,6 @@ static void listFiles(int errorCode, void* buffer, void* callback) {   // FUTURE
                 hourType[2] = '\0';
             }
 
-            // Get the cluster number
-            unsigned int clusterNumber = (de[i].clusterHigh << 16) | de[i].clusterLow;
-
             // Get the length of the long filename
             unsigned longFilenameLength = len(longFilenameReversed);
 
@@ -395,9 +391,10 @@ static void listFiles(int errorCode, void* buffer, void* callback) {   // FUTURE
             }
         
             // Print the returned buffer
-            kprintf("%-12s %6d %4d  %02d/%02d/%04d%2d:%02d:%02d%s  %s\n",
-                filenameBuffer, de[i].size, clusterNumber,
+            kprintf("%-12s %6d  %02d/%02d/%04d %02d:%02d:%02d %s  %s\n",
+                filenameBuffer, de[i].size,
                 month, day, year, hour, minute, second, hourType, longFilename);
+            
 
             // Reset the reversed long filename
             for(int i = 0; i < 100; i++)
@@ -408,7 +405,7 @@ static void listFiles(int errorCode, void* buffer, void* callback) {   // FUTURE
             longFilenameReversed[1] = 'e';
             longFilenameReversed[2] = 'n';
             longFilenameReversed[3] = 'o';
-            longFilenameReversed[4] = 'D';
+            longFilenameReversed[4] = 'N';
             longFilenameReversed[5] = '[';
 
             // Reset the reversed long filename index to 0
