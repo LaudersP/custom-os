@@ -213,7 +213,6 @@ struct GUID linuxGUID = {
     { 0x3d, 0x69,0xd8, 0x47, 0x7d, 0xe4 }
 };
 
-static struct VBR vbr;
 static void read_vbr_callback( int errorcode, void* sectorData, void* kmain_callback) {
     // Check for errors
     if( errorcode != SUCCESS ){
