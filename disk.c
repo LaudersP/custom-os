@@ -213,10 +213,11 @@ struct GUID linuxGUID = {
     { 0x3d, 0x69,0xd8, 0x47, 0x7d, 0xe4 }
 };
 
+struct VBR vbr;
+
 static void read_vbr_callback( int errorcode, void* sectorData, void* kmain_callback) {
     // Check for errors
     if( errorcode != SUCCESS ){
-        kprintf("Cannot read VBR: %d\n",errorcode);
         panic("Cannot continue");
         return;
     }
@@ -232,7 +233,6 @@ static void read_vbr_callback( int errorcode, void* sectorData, void* kmain_call
 static void read_partition_table_callback(int errorcode, void* sectorData, void* kmain_callback) {
     // Check for error
     if( errorcode != SUCCESS ) {
-        kprintf("Cannot read partition table: %d\n",errorcode);
         panic("Cannot continue");
     }
 
@@ -259,7 +259,7 @@ u32 clusterNumberToSectorNumber(u32 clnum) {
     return clusterStart + (clnum - 2) * vbr.sectors_per_cluster;
 }
 
-static void parseFilename(struct DirEntry* entry, char* buffer) {
+void parseFilename(struct DirEntry* entry, char* buffer) {
     unsigned bufferCharCout = 0;
 
     // Iterate through the filename
@@ -414,32 +414,27 @@ static void listFiles(int errorCode, void* buffer, void* callback) {   // FUTURE
             // Construct the lfn entry
             struct LFNEntry* lfn = (struct LFNEntry*)&de[i];
 
-            // Add the namen backwards to the reversed long filename
+            // Add the name backwards to the reversed long filename
             for(int i = 3; i >= 0; i--) {
                 // Skip the null character
                 if(lfn->name2[i] != 0x0000 && lfn->name2[i] != -1)
-                    // kprintf("%c", lfn->name2[i]);
                     longFilenameReversed[longFilenameReverseIndex++] = lfn->name2[i];
             }
 
             for(int i = 11; i >= 0; i--) {
                 // Skip the null character
                 if(lfn->name1[i] != 0x0000 && lfn->name1[i] != -1)
-                    // kprintf("%c", lfn->name1[i]);
                     longFilenameReversed[longFilenameReverseIndex++] = lfn->name1[i];
             }
 
             for(int i = 9; i >= 0; i--) {
                 // Skip the null character
                 if(lfn->name0[i] != 0x0000 && lfn->name0[i] != -1)
-                    // kprintf("%c", lfn->name0[i]);
                     longFilenameReversed[longFilenameReverseIndex++] = lfn->name0[i];
             }
             longFilenameReversed[longFilenameReverseIndex] = '\0';
         }
     }
-
-    kprintf("\nDONE\n");
 }
 
 void readRoot() {

@@ -122,4 +122,4 @@ struct LFNEntry {
 };
 #pragma pack(pop)
 
-struct VBR vbr;
+void parseFilename(struct DirEntry* entry, char* buffer);
