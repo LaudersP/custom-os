@@ -4,19 +4,9 @@
 #include "kstrcpy.h"
 #include "disk.h"
 #include "kstrequal.h"
-#include "kprintf.h"
 #include "toupper.h"
 #include "tolower.h"
 
-#define MAX_PATH 64
-
-struct File{
-    int in_use;
-    int flags;
-    char filename[MAX_PATH+1];
-};
-
-#define MAX_FILES 16        //real OS's use something like 1000 or so...
 struct File file_table[MAX_FILES];
 
 struct FileOpenCallbackData {
@@ -86,7 +76,15 @@ static void file_open_part_2(int errorcode, void* data, void* pFileOpenCallbackD
 
             // Compare the requested filename
             if(kstrequal(filename, desiredFilename)) {
+                // Flag the file being found
                 fileFound = 1;
+                        
+                // Set the file size 
+                file_table[d->fd].size = de[i].size;
+
+                // Set the files first cluster
+                file_table[d->fd].firstCluster = (de[i].clusterHigh << 16) | de[i].clusterLow;
+
                 break;
             }
         } else {
@@ -123,7 +121,15 @@ static void file_open_part_2(int errorcode, void* data, void* pFileOpenCallbackD
         if(longFilename.endOfFilename) {
             // Compare the long filename
             if(kstrequal(longFilename.filename, desiredFilename)) {
+                // Flag that file was found
                 fileFound = 1;
+                        
+                // Set the file size 
+                file_table[d->fd].size = de[i].size;
+
+                // Set the files first cluster
+                file_table[d->fd].firstCluster = (de[i].clusterHigh << 16) | de[i].clusterLow;
+
                 break;
             }
 
@@ -136,11 +142,13 @@ static void file_open_part_2(int errorcode, void* data, void* pFileOpenCallbackD
     }
 
     if(fileFound){
+        // Set the offset of the file read to 0
+        file_table[d->fd].offset = 0;
+
         // File was found, call the callback using the file descriptor
         d->callback( d->fd, d->callback_data );
     } else {
         // File was not found, release the file descriptor calling callback with ENOENT
-        kprintf("\nERROR: could not find!\n");
         file_table[d->fd].in_use=0;
         d->callback( ENOENT, d->callback_data );
     }
@@ -154,7 +162,6 @@ extern struct VBR vbr;
 int file_open(const char* filename, int flags, file_open_callback_t callback, void* callback_data) {
     // Check the fileanme
     if(kstrlen(filename) >= MAX_PATH) {
-        kprintf("\nERROR W LEN: %d\n", kstrlen(filename));
         callback(ENOENT, callback_data);
         return ENOENT;
     }
