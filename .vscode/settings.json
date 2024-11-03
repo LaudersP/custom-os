@@ -8,6 +8,12 @@
         "memory.h": "c",
         "linked_list.h": "c",
         "pic.h": "c",
-        "disk.h": "c"
+        "disk.h": "c",
+        "tolower.h": "c",
+        "*.tcc": "c",
+        "string_view": "c",
+        "algorithm": "c",
+        "istream": "c",
+        "limits": "c"
     }
 }
