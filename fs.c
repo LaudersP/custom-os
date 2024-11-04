@@ -6,6 +6,7 @@
 #include "kstrequal.h"
 #include "toupper.h"
 #include "tolower.h"
+#include "kprintf.h"
 
 struct File file_table[MAX_FILES];
 

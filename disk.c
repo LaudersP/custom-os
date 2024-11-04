@@ -179,7 +179,7 @@ void disk_read_sectors(
     
     struct Request* req = (struct Request*) kmalloc(
                 sizeof(struct Request)
-   );
+    );
     if(!req) {
         callback(ENOMEM, NULL, callback_data);
         return;
@@ -215,6 +215,41 @@ struct GUID linuxGUID = {
 
 struct VBR vbr;
 
+#define MAX_DISK_SIZE_MB 128
+
+u32 fat[MAX_DISK_SIZE_MB*1024*1024 / 4096];
+static int fatSectorsRemaining;
+static disk_metadata_callback_t kmain_callback;
+
+void read_fat_callback(int errorcode, void* data, void* p) {
+    if(errorcode != SUCCESS)
+        panic("Cannot read FAT!");
+
+    u32 i = (u32)p;
+
+    // Each sector has 128 FAT entries in it and is 512 bytes in size
+    kmemcpy(fat + 128*i, data, 512);
+    --fatSectorsRemaining;
+    if(fatSectorsRemaining == 0)
+        kmain_callback();
+}
+
+void read_fat(disk_metadata_callback_t f) {
+    kmain_callback = f;
+    fatSectorsRemaining = vbr.sectors_per_fat;
+    unsigned fatStart = vbr.first_sector + vbr.reserved_sectors;
+
+    // This fires off a bunch of overlapped reads
+    for(u32 i = 0; i < vbr.sectors_per_fat; i++) {
+        disk_read_sectors(
+            fatStart+i,
+            1,
+            read_fat_callback,
+            (void*)i
+        );
+    }
+}
+
 static void read_vbr_callback( int errorcode, void* sectorData, void* kmain_callback) {
     // Check for errors
     if( errorcode != SUCCESS ){
@@ -227,7 +262,7 @@ static void read_vbr_callback( int errorcode, void* sectorData, void* kmain_call
 
     // Call the kmain call back
     disk_metadata_callback_t f = (disk_metadata_callback_t) kmain_callback;
-    f();    
+    read_fat(f);  
 }
 
 static void read_partition_table_callback(int errorcode, void* sectorData, void* kmain_callback) {
@@ -443,4 +478,8 @@ void readRoot() {
 
     // Read the root sector
     disk_read_sectors(rootSectorNum, 2, listFiles, 0);
+}
+
+u32* getFAT() {
+    return fat;
 }

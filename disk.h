@@ -123,3 +123,4 @@ struct LFNEntry {
 #pragma pack(pop)
 
 void parseFilename(struct DirEntry* entry, char* buffer);
+u32* getFAT();

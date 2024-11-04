@@ -14,12 +14,13 @@ struct ReadInfo{
     file_read_callback_t callback;
     void* callback_data;
 };
-#include "kprintf.h"
+
 void file_read_part_2(int errorcode, void* sector_data, void* callback_data) {
     struct ReadInfo* ri = (struct ReadInfo*)callback_data;
     
     if(errorcode) {
         ri->callback(errorcode, ri->buffer, 0, ri->callback_data);
+        return;
     } else {
         unsigned bytesPerCluster = vbr.bytes_per_sector * vbr.sectors_per_cluster;
         unsigned offsetInBuffer = file_table[ri->fd].offset % bytesPerCluster;
@@ -50,25 +51,19 @@ void file_read( int fd, void* buf, unsigned count, file_read_callback_t callback
     // 1. Valid index
     // 2. File table entry is true
     if(!(fd >= 0 && fd < MAX_FILES) || !(file_table[fd].in_use)) {
-        if(callback)
-            callback(EINVAL, buf, count, callback_data);
-        
+        callback(EINVAL, buf, count, callback_data);
         return;
     }
 
     // Check the count variable
     if(count == 0) {
-        if(callback)
-            callback(EINVAL, buf, 0, callback_data);
-        
+        callback(EINVAL, buf, 0, callback_data);
         return;
     }
 
     // Ensure that we are not at EOF
     if(file_table[fd].offset >= file_table[fd].size) {
-        if(callback)
-            callback(SUCCESS, buf, 0, callback_data);
-
+        callback(SUCCESS, buf, 0, callback_data);
         return;
     }
 
@@ -84,8 +79,19 @@ void file_read( int fd, void* buf, unsigned count, file_read_callback_t callback
     ri->callback = callback;
     ri->callback_data = callback_data;
 
-    unsigned secnum = clusterNumberToSectorNumber(file_table[fd].firstCluster);
-    disk_read_sectors(secnum, vbr.sectors_per_cluster, file_read_part_2, ri);
+    // Calculate the number of clusters to skip
+    unsigned bytesPerCluster = vbr.bytes_per_sector * vbr.sectors_per_cluster;
+    unsigned clustersToSkip = file_table[fd].offset / bytesPerCluster;
+
+    // Get the FAT
+    u32* fat = getFAT();
+
+    // Iterate through the FAT to the desired cluster
+    unsigned c = file_table[fd].firstCluster;
+    for(unsigned i = 0; i < clustersToSkip; i++)
+        c = fat[c];
+        
+    disk_read_sectors(clusterNumberToSectorNumber(c), vbr.sectors_per_cluster, file_read_part_2, ri);
 }
 
 void file_write( int fd, void* buf, unsigned count, file_write_callback_t callback, void* callback_data ) {

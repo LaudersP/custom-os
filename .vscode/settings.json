@@ -1,13 +1,14 @@
 {
-    "files.associations": {
-        "console.h": "c",
-        "utils.h": "c",
-        "etec3701_10x20.h": "c",
-        "kprintf.h": "c",
-        "serial.h": "c",
-        "memory.h": "c",
-        "linked_list.h": "c",
-        "pic.h": "c",
-        "disk.h": "c"
-    }
+  "files.associations": {
+    "console.h": "c",
+    "utils.h": "c",
+    "etec3701_10x20.h": "c",
+    "kprintf.h": "c",
+    "serial.h": "c",
+    "memory.h": "c",
+    "linked_list.h": "c",
+    "pic.h": "c",
+    "disk.h": "c"
+  },
+  "cSpell.words": ["kmemcpy"]
 }
