@@ -4,6 +4,10 @@
 #include "kstrequal.h"
 #include "errno.h"
 
+#define SEEK_SET 0
+#define SEEK_CUR 1
+#define SEEK_END 2
+
 typedef void (*file_read_callback_t)(
         int ecode,          //error code
         void* buf,          //buffer with data

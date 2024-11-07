@@ -43,6 +43,16 @@ linkflags=[
     "/map:kernel.syms"      #kernel symbols
 ]
 
+# Create options for the user link phase
+userlinkflags=[
+    "/base:0x400000",       #where file gets loaded
+    "/machine:x86",         #32 bit
+    "/nodefaultlib",        #no standard libraries
+    "/subsystem:console",   #console app
+    "/fixed",               #not relocatable
+    "/entry:main",          #function to be called on startup
+]
+
 # Helper function
 def run(*args):
     print(args)
@@ -59,13 +69,21 @@ for filename in os.listdir("."):
         objectfiles.append(obj)
 run( [link] + linkflags + objectfiles )
 
-import testsuite
+# Take each .exe file
+for filename in os.listdir("user"):
+    if filename.endswith(".c"):
+        filename = os.path.join("user",filename)
+        obj=filename+".o"
+        exe=filename.replace(".c",".exe")
+        run( [cc] + cflags + ["-o", obj, filename] )
+        run( [link] + userlinkflags + ["/out:"+exe , obj] )
+
 run( [
     python, "fool.pyz", "hd.img",
-    "create","64",
-    "cp","kernel.exe","KERNEL.EXE"
+        "create", "64",
+        "cp", "kernel.exe", "KERNEL.EXE",
+        "cp", "user/hello.exe", "HELLO.EXE"
 ])
-testsuite.copy(python,"hd.img")
 
 # Run Qemu
 run( [ qemu,

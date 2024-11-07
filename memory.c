@@ -211,3 +211,35 @@ void kfree(void* v) {
         }
     }
 }
+
+// Return 0 if same
+// Return -1 if ptr1 < ptr2
+// Return 1 if ptr1 > ptr2
+int kmemcmp(const void* ptr1, const void* ptr2, const unsigned numOfBytes) {
+    const unsigned char* p1 = (const unsigned char*) ptr1;
+    const unsigned char* p2 = (const unsigned char*) ptr2;
+
+    // Iterate through each byte in memory
+    for(unsigned i = 0; i < numOfBytes; i++) {
+        // Check if p1 is less than p2
+        if(p1[i] < p2[i])
+            return -1;
+        // Check if p1 is greater than p2
+        else if(p1[i] > p2[i])
+            return 1;
+    }
+
+    return 0;
+}
+
+void* kmemset(void* dest, const int value, const unsigned count) {
+    unsigned char* ptr = (unsigned char*)dest;
+    
+    // Iterate through each byte in memory
+    for(unsigned i = 0; i < count; i++) {
+        // Set the memory data
+        ptr[i] = (unsigned char)value;
+    }
+
+    return dest;
+}

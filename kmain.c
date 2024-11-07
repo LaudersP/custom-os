@@ -13,14 +13,12 @@ __asm__(
 #include "interrupt.h"
 #include "timer.h"
 #include "disk.h"
+#include "exec.h"
 
 struct MultibootInfo machineInfo;
 
-void sweet();
-
 void kmain2() {
-    kprintf("\nSTART\n");
-    sweet();
+    exec("HELLO.EXE", 0x400000, exec_transfer_control, 0);
 }
 
 void kmain(struct MultibootInfo* mbi) {

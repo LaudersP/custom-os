@@ -99,10 +99,6 @@ void file_write( int fd, void* buf, unsigned count, file_write_callback_t callba
     callback( ENOSYS, 0, callback_data );
 }
 
-#define SEEK_SET 0
-#define SEEK_CUR 1
-#define SEEK_END 2
-
 int file_seek(int fd, int delta, int whence) {
     // Verify the fd is valid
     // 1. Valid index

@@ -19,3 +19,5 @@ Header* removeFromFreeList(unsigned i);
 void removeThisNodeFromFreeList(Header* h);
 void splitBlockOfOrder(unsigned i);
 void kfree(void* v);
+int kmemcmp(const void* ptr1, const void* ptr2, const unsigned numOfBytes);
+void* kmemset(void* dest, const int value, const unsigned count);
