@@ -10,5 +10,6 @@
     "pic.h": "c",
     "disk.h": "c"
   },
-  "cSpell.words": ["kmemcpy"]
+  "cSpell.words": ["kmemcpy"],
+  "cSpell.ignoreWords": ["LGDT"]
 }

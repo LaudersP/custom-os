@@ -24,7 +24,7 @@ struct GDTEntry {
 };
 
 // Global variable
-static struct GDTEntry gdt[3];
+static struct GDTEntry gdt[6];
 
 struct LGDT{
     u16 size;
@@ -86,4 +86,14 @@ void interrupt_enable();
 void timer0Handler(struct InterruptContext* ctx);
 void timerHandler(struct InterruptContext* ctx);
 
+#pragma pack(pop)
+
+
+#pragma pack(push,1)
+struct TaskStateSegment{
+    u32 mustBeZero;
+    u32 esp;
+    u32 ss;     //stack segment
+    u32 unused[15];
+};
 #pragma pack(pop)

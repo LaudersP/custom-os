@@ -65,6 +65,12 @@ void interrupt_init() {
         register_interrupt_handler(i,ackPic2);
 }
 
+static struct TaskStateSegment tss = {
+    0,
+    0x10000,    //64KB mark: Stack address
+    16          //offset of GDT entry for stack segment
+};
+
 // Initializes the Global Descriptor Table
 void gdt_init() {
     // Set GDT index 0
@@ -103,24 +109,63 @@ void gdt_init() {
                     SEGMENT_LIMIT_32_BIT |
                     SEGMENT_32_BIT;
 
+    // --- Segment Ring 3 ---
+    // Set code segment entry
+    gdt[3].baseBits0to15=0;
+    gdt[3].baseBits16to23=0;
+    gdt[3].baseBits24to31=0;
+    gdt[3].limitBits0to15=0xffff;
+    gdt[3].flags = SEGMENT_TYPE_CODE |
+                   SEGMENT_IS_CODE_OR_DATA |
+                   SEGMENT_RING_3 |
+                   SEGMENT_PRESENT ;
+    gdt[3].flagsAndLimitBits16to19 =
+                    SEGMENT_LIMIT_HIGH_NIBBLE |
+                    SEGMENT_LIMIT_32_BIT |
+                    SEGMENT_32_BIT;
+
+    // Set data segment entry
+    gdt[4].baseBits0to15=0;
+    gdt[4].baseBits16to23=0;
+    gdt[4].baseBits24to31=0;
+    gdt[4].limitBits0to15=0xffff;
+    gdt[4].flags = SEGMENT_TYPE_DATA |
+                   SEGMENT_IS_CODE_OR_DATA |
+                   SEGMENT_RING_3 |
+                   SEGMENT_PRESENT ;
+    gdt[4].flagsAndLimitBits16to19 =
+                    SEGMENT_LIMIT_HIGH_NIBBLE |
+                    SEGMENT_LIMIT_32_BIT |
+                    SEGMENT_32_BIT;
+
+    // Set the TSS segment
+    u32 tssAddr = (u32)(&tss);
+    gdt[5].baseBits0to15=tssAddr & 0xffff;
+    gdt[5].baseBits16to23=(tssAddr>>16) & 0xff;
+    gdt[5].baseBits24to31=(tssAddr>>24) & 0xff;
+    gdt[5].limitBits0to15=sizeof(tss)-1;
+    gdt[5].flags = 0x89;
+    gdt[5].flagsAndLimitBits16to19 = 0;
+
     // Set the table and initialize the segment registers
     struct LGDT lgdt;
     lgdt.size = sizeof(gdt);
     lgdt.addr = &gdt[0];
     void* tmp = &lgdt;
-    asm volatile (
-        "lgdt (%%eax)\n"       //load gdt register
-        "mov $16,%%eax\n"      //set eax to 16: Offset to gdt[2]
-        "mov %%eax,%%ds\n"     //store 16 to ds
-        "mov %%eax,%%es\n"     //store 16 to es
-        "mov %%eax,%%fs\n"     //store 16 to fs
-        "mov %%eax,%%gs\n"     //store 16 to gs
-        "mov %%eax,%%ss\n"     //store 16 to ss
-        "jmpl $0x8,$reset_cs\n"    //Intel says we must do a jmp here
-        "reset_cs:\n"
-        "nop\n"                //no operation
+    asm volatile(
+        "lgdt (%%eax)\n"
+        "ltr %%bx\n"           //new!
+        "mov $16,%%eax\n"      //data segment, ring 0
+        "mov %%eax,%%ds\n"
+        "mov %%eax,%%es\n"
+        "mov %%eax,%%fs\n"
+        "mov %%eax,%%gs\n"
+        "mov %%eax,%%ss\n"
+        "jmpl $0x8,$reset_cs%=\n"  //code segment, ring 0
+        "reset_cs%=:\n"
+        "nop\n"
         : "+a"(tmp)
-        :
+        : "b"( 40 | 3 )    //TSS GDT entry or'd with ring level (3)
         : "memory"
     );
 }
@@ -193,7 +238,8 @@ void illegalOpcode(struct InterruptContext* ctx) {
 }
 
 void generalFault(struct InterruptContext* ctx) {
-    kprintf("General fault\n");
+    kprintf("General protection fault: 0x%x\n", ctx->eip);
+    while(1){}
 }
 
 void ackPic1(struct InterruptContext* ctx) {

@@ -277,8 +277,8 @@ void exec(const char* fname, unsigned loadAddress, exec_callback_t callback, voi
 
 #define EXE_STACK 0x7FFFFC
 
-void exec_transfer_control(int errorcode, u32 entryPoint, void* callback_data) {
-    // Check for error
+void exec_transfer_control(int errorcode, unsigned entryPoint, void* callback_data) {
+    // Check for errors
     if( errorcode ){
         kprintf("exec failed: %d\n",errorcode);
         return;
@@ -286,10 +286,27 @@ void exec_transfer_control(int errorcode, u32 entryPoint, void* callback_data) {
 
     u32 c = EXE_STACK;
     u32 b = entryPoint;
-    
-    // Can test using 'x/10i 0x400000' in qemu terminal
+
+    // Assembly transfer
     asm volatile(
-        "mov %%ecx, %%esp\n"
-        "jmp *%%ebx\n"
-        : "+c"(c), "+b"(b) );
+        "mov $(32|3),%%eax\n"   //ring 3 GDT data segment
+        "mov %%ax,%%ds\n"       //ring 3 GDT data segment
+        "mov %%ax,%%es\n"       //ring 3 GDT data segment
+        "mov %%ax,%%fs\n"       //ring 3 GDT data segment
+        "mov %%ax,%%gs\n"       //ring 3 GDT data segment
+        "pushl $(32|3)\n"       //ss, ring 3 GDT data segment
+        "push %%ecx\n"          //esp
+        "push $0x202\n"         //eflags
+        "pushl $(24|3)\n"       //cs, ring 3 GDT code segment
+        "pushl %%ebx\n"         //eip
+        "xor %%eax,%%eax\n"     //clear register
+        "xor %%ebx,%%ebx\n"     //clear register
+        "xor %%ecx,%%ecx\n"     //clear register
+        "xor %%edx,%%edx\n"     //clear register
+        "xor %%esi,%%esi\n"     //clear register
+        "xor %%edi,%%edi\n"     //clear register
+        "xor %%ebp,%%ebp\n"     //clear register
+        "iret\n"
+        : "+c"(c), "+b"(b)
+    );
 }
