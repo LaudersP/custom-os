@@ -69,14 +69,30 @@ for filename in os.listdir("."):
         objectfiles.append(obj)
 run( [link] + linkflags + objectfiles )
 
+# Compile lib files
+libfiles=[]
+for filename in os.listdir( os.path.join("user","libc")):
+    if filename.endswith(".c"):
+        filename = os.path.join("user","libc",filename)
+        obj=filename+".o"
+        run( [cc] + cflags + ["-o", obj, filename] )
+        libfiles.append(obj)
+
+libc = os.path.join("user","libc.lib")
+run( [ link , "/lib" , "/out:"+libc ] + libfiles )
+
 # Take each .exe file
 for filename in os.listdir("user"):
     if filename.endswith(".c"):
         filename = os.path.join("user",filename)
         obj=filename+".o"
         exe=filename.replace(".c",".exe")
-        run( [cc] + cflags + ["-o", obj, filename] )
-        run( [link] + userlinkflags + ["/out:"+exe , obj] )
+        run( [cc] + cflags + ["-o", obj, filename ] )
+        run( [link] + userlinkflags + [
+              "/out:"+exe,
+              obj,
+              libc
+        ])
 
 run( [
     python, "fool.pyz", "hd.img",

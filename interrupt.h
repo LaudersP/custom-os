@@ -61,7 +61,7 @@ extern void* lowlevel_addresses[];
 
 void interrupt_init();
 void gdt_init();
-void idt_inti();
+void idt_init();
 void highlevel_handler(struct InterruptContext* ctx);
 
 #define MAX_HANDLERS 4

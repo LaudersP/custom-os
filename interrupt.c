@@ -1,6 +1,7 @@
 #include "interrupt.h"
 #include "kprintf.h"
 #include "console.h"
+#include "syscall.h"
 
 // Midlevel handler assembly code
 asm (
@@ -32,7 +33,7 @@ asm (
 void interrupt_init() {
     gdt_init();
 
-    idt_inti();
+    idt_init();
 
     struct LIDT lidt;
     lidt.size = sizeof(idt);
@@ -170,8 +171,8 @@ void gdt_init() {
     );
 }
 
-// Intitialize the Interrupt Descriptor Table
-void idt_inti() {
+// Initialize the Interrupt Descriptor Table
+void idt_init() {
     for(unsigned i = 0; i < NUM_INTERRUPTS; i++) {
         u32 a = (u32)(lowlevel_addresses[i]);
         idt[i].addrLow = (u16)(a & u32_LOW_MASK);
@@ -180,6 +181,9 @@ void idt_inti() {
         idt[i].zero = 0;
         idt[i].flags = 0x8e;
     }
+
+    idt[48].flags = 0xee;
+    register_interrupt_handler(48, syscall_handler);
 }
 
 void highlevel_handler(struct InterruptContext* ctx) {
