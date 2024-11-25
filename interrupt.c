@@ -2,6 +2,7 @@
 #include "kprintf.h"
 #include "console.h"
 #include "syscall.h"
+#include "memory.h"
 
 // Midlevel handler assembly code
 asm (
@@ -57,6 +58,7 @@ void interrupt_init() {
     register_interrupt_handler(0, divideByZero);
     register_interrupt_handler(6, illegalOpcode);
     register_interrupt_handler(13, generalFault);
+    register_interrupt_handler(14, pageFaultHandler);
     register_interrupt_handler(40, timerHandler);
 
     for(int i=32;i<40;++i)
@@ -244,6 +246,22 @@ void illegalOpcode(struct InterruptContext* ctx) {
 void generalFault(struct InterruptContext* ctx) {
     kprintf("General protection fault: 0x%x\n", ctx->eip);
     while(1){}
+}
+
+void pageFaultHandler(struct InterruptContext* ctx) {
+    kprintf("\nPage fault eip=0x%x addr=0x%x code=%x (%s %s %s %s %s)\n",
+        ctx->eip,
+        getFaultingAddress(),
+        ctx->errorcode,
+        (ctx->errorcode & 1) ? "present":"absent",
+        (ctx->errorcode & 2) ? "write":"read",
+        (ctx->errorcode & 4) ? "user":"kernel",
+        (ctx->errorcode & 8) ? "invalid":"valid",
+        (ctx->errorcode & 16) ? "instruction":"data"
+    );
+    while(1){
+        asm volatile("hlt");
+    }
 }
 
 void ackPic1(struct InterruptContext* ctx) {
