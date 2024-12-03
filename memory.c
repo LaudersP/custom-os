@@ -245,7 +245,7 @@ void* kmemset(void* dest, const int value, const unsigned count) {
 }
 
 // -------- Paging Code --------
-static struct PageTable kernelPageTable;
+struct PageTable kernelPageTable;
 
 void pagingInit(struct MultibootInfo* info) {
     // Setup the page table

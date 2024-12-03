@@ -53,5 +53,5 @@ unsigned get_rate() {
 }
 
 unsigned get_uptime() {
-    return (clockTicks / get_rate() * 1000);
+    return (clockTicks * 1000) / get_rate();
 }

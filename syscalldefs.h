@@ -9,3 +9,4 @@
 #define SYSCALL_READ    4
 #define SYSCALL_WRITE   5
 #define SYSCALL_SEEK    6
+#define SYSCALL_SLEEP   7

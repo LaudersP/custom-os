@@ -28,6 +28,7 @@ int kmemcmp(const void* ptr1, const void* ptr2, const unsigned numOfBytes);
 void* kmemset(void* dest, const int value, const unsigned count);
 
 // Paging Functions
+extern struct PageTable kernelPageTable;
 struct PageTable{
     unsigned table[1024] __attribute__((aligned(4096)));
 };

@@ -304,5 +304,7 @@ void timerHandler(struct InterruptContext* ctx) {
     inb(0x71);
     
     increase_clock_ticks();
+
+    sched_check_wakeup();
     schedule(ctx);
 }

@@ -13,7 +13,13 @@ struct PageTable page_tables[MAX_PROC];
 
 void scheduleInit() {
     // Set the kernel process table entry to STARTING
-    process_table[0].state = STARTING;
+    process_table[0].state = READY;
+    process_table[0].eip = (u32)idleTask;
+    process_table[0].cs = 8;
+    process_table[0].ss = 16;
+    process_table[0].esp = 0x10000;
+    process_table[0].page_table = &kernelPageTable;
+    process_table[0].eflags = 0x202;
 
     // Set all state fields to VACANT
     for(unsigned i = SKIP_IDLE_ENTRY; i < MAX_PROC; i++) {
@@ -145,28 +151,23 @@ void spawn(const char* path, spawn_callback_t callback, void* callback_data) {
 static volatile int can_schedule=0;
 
 int scheduleSelectProcess() {
-    // Iterate through the process table
-    unsigned index = current_pid;
+    int newp = -1;
 
-    for(index = (current_pid + 1); index < MAX_PROC; index++) {
-        // Skip entry 0
-        if(index == 0) continue;
+    for(int delta = 1; delta <= MAX_PROC; delta++) {
+        int i = (current_pid + delta) % MAX_PROC;
 
-        // Check if the current entry is READY or RUNNING
-        if(process_table[index].state == READY || process_table[index].state == RUNNING) {
+        if(i == 0) continue;
+
+        if(process_table[i].state == READY || process_table[i].state == RUNNING) {
+            newp = i;
             break;
         }
-
-        // Check for loop
-        if(index == (MAX_PROC - 1))
-            index = 0;
     }
 
-    // Ensure that index is not the first table entry
-    if(index == 0)
-        panic("NOT THE FIRST ENTRY!\n");
+    if(newp == -1)
+        newp = 0;
 
-    return index;
+    return newp;
 }
 
 void schedule(struct InterruptContext* ctx) {
@@ -187,6 +188,25 @@ void scheduleEnable() {
 }
 
 static void copyRegisters(struct PCB* pcb, struct InterruptContext* ctx) {
+    pcb->eax = ctx->eax;
+    pcb->ebx = ctx->ebx;
+    pcb->ecx = ctx->ecx;
+    pcb->edx = ctx->edx;
+    pcb->esi = ctx->esi;
+    pcb->edi = ctx->edi;
+    pcb->ebp = ctx->ebp;
+    pcb->esp = ctx->esp;
+    pcb->ds = ctx->ds;
+    pcb->es = ctx->es;
+    pcb->fs = ctx->fs;
+    pcb->gs = ctx->gs;
+    pcb->cs = ctx->cs;
+    pcb->ss = ctx->ss;
+    pcb->eip = ctx->eip;
+    pcb->eflags = ctx->eflags;
+}
+
+static void restoreRegisters(struct PCB* pcb, struct InterruptContext* ctx) {
     ctx->eax = pcb->eax;
     ctx->ebx = pcb->ebx;
     ctx->ecx = pcb->ecx;
@@ -206,7 +226,7 @@ static void copyRegisters(struct PCB* pcb, struct InterruptContext* ctx) {
 }
 
 void sched_save_process_status(int pid, struct InterruptContext* ctx, enum ProcessState newState) {
-    if(current_pid == -1 )
+    if(current_pid == -1 || current_pid == 0)
         return;         //nothing to save
 
     struct PCB* pcb = &process_table[pid];
@@ -223,7 +243,7 @@ void sched_restore_process_state(int pid, struct InterruptContext* ctx, enum Pro
         panic("Bad PID");
 
     struct PCB* pcb = &process_table[pid];
-    copyRegisters(pcb, ctx);
+    restoreRegisters(pcb, ctx);
 
     // Set the page table to the pcb page table
     setPageTable(pcb->page_table);
@@ -240,5 +260,46 @@ void sched_restore_process_state(int pid, struct InterruptContext* ctx, enum Pro
         panic("we should not get here");
     } else {
         copyRegisters(pcb, ctx);
+    }
+}
+
+__asm__(
+    "_idleTask:\n"
+    "   sti\n"              //enable interrupts
+    "   hlt\n"              //halt
+    "   jmp _idleTask\n"
+);
+
+void sched_put_to_sleep_for_duration(unsigned howLong, struct InterruptContext* ctx) {
+    // Set state to SLEEPING
+    sched_save_process_status(current_pid, ctx, SLEEPING);
+
+    struct PCB* pcb = &process_table[current_pid];
+
+    // Set waitingFor 
+    pcb->waitingFor = TIME;
+
+    // Set waitTime 
+    pcb->waitData.waitTime = get_uptime() + howLong;
+
+    // Set current_pid to -1 to skip in the following schedule call
+    current_pid = -1;
+}
+
+void sched_check_wakeup() {
+    unsigned now = get_uptime();
+
+    // Iterate through the process table
+    for(unsigned i = 0; i < MAX_PROC; i++) {
+        // Check for sleeping processes
+        if(process_table[i].state == SLEEPING) {
+            // Check if it is waiting for TIME
+            if(process_table[i].waitingFor == TIME) {
+                // Check if waitingTime has elasped
+                if(now >= process_table[i].waitData.waitTime) {
+                    process_table[i].state = READY;
+                }
+            }
+        }
     }
 }

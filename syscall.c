@@ -2,6 +2,7 @@
 #include "syscalldefs.h"
 #include "errno.h"
 #include "kprintf.h"
+#include "sched.h"
 
 void syscall_handler(struct InterruptContext* ctx) {
     int req = ctx->eax;
@@ -61,6 +62,14 @@ void syscall_handler(struct InterruptContext* ctx) {
                     break;
             }
             break;
+        case SYSCALL_SLEEP: {
+            unsigned howLong = ctx->ebx;
+            ctx->eax = 0;   //return value from syscall
+            sched_put_to_sleep_for_duration(howLong, ctx);
+            schedule(ctx);
+            //we are now in the new process's context
+            return;
+        }
         default:
             ctx->eax = ENOSYS;
             break;
