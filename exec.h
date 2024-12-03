@@ -2,6 +2,8 @@
 
 #include "utils.h"
 
+#define EXE_STACK 0x7FFFFC
+
 #pragma pack(push,1)
 struct DOSHeader {
     char magic[2];          //'MZ'

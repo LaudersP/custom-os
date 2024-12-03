@@ -275,8 +275,6 @@ void exec(const char* fname, unsigned loadAddress, exec_callback_t callback, voi
     file_open(fname, 0, exec2, ei );    //0=flags
 }
 
-#define EXE_STACK 0x7FFFFC
-
 void exec_transfer_control(int errorcode, unsigned entryPoint, void* callback_data) {
     // Check for errors
     if( errorcode ){

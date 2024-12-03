@@ -3,11 +3,16 @@
 #include "console.h"
 #include "syscall.h"
 #include "memory.h"
+#include "sched.h"
 
 // Midlevel handler assembly code
 asm (
     ".global _midlevel_handler\n"
     "_midlevel_handler:\n"
+    "   push %gs\n"
+    "   push %fs\n"
+    "   push %es\n"
+    "   push %ds\n"
     "   push %ebp\n"
     "   push %edi\n"
     "   push %esi\n"
@@ -15,10 +20,15 @@ asm (
     "   push %ecx\n"
     "   push %ebx\n"
     "   push %eax\n"
-    "   push %esp\n"        //address of stack top = addr of eax
-    "   cld\n"      //clear direction flag; C expects this
+    "   push %esp\n"
+    "   mov $16,%eax\n"
+    "   mov %eax,%ds\n"
+    "   mov %eax,%es\n"
+    "   mov %eax,%fs\n"
+    "   mov %eax,%gs\n"
+    "   cld\n"
     "   call _highlevel_handler\n"
-    "   addl $4, %esp\n"    //discard parameter for C
+    "   addl $4,%esp\n"
     "   pop %eax\n"
     "   pop %ebx\n"
     "   pop %ecx\n"
@@ -26,6 +36,10 @@ asm (
     "   pop %esi\n"
     "   pop %edi\n"
     "   pop %ebp\n"
+    "   pop %ds\n"
+    "   pop %es\n"
+    "   pop %fs\n"
+    "   pop %gs\n"
     "   add $8,%esp\n"
     "   iret\n"
 );
@@ -59,13 +73,14 @@ void interrupt_init() {
     register_interrupt_handler(6, illegalOpcode);
     register_interrupt_handler(13, generalFault);
     register_interrupt_handler(14, pageFaultHandler);
-    register_interrupt_handler(40, timerHandler);
 
     for(int i=32;i<40;++i)
         register_interrupt_handler(i,ackPic1);
 
     for(int i=40;i<48;++i)
         register_interrupt_handler(i,ackPic2);
+    
+    register_interrupt_handler(40, timerHandler);
 }
 
 static struct TaskStateSegment tss = {
@@ -241,6 +256,8 @@ void divideByZero(struct InterruptContext* ctx) {
 
 void illegalOpcode(struct InterruptContext* ctx) {
     kprintf("Undefined opcode\n");
+    kprintf("EIP: %x\n", ctx->eip);
+    while(1){}
 }
 
 void generalFault(struct InterruptContext* ctx) {
@@ -287,4 +304,5 @@ void timerHandler(struct InterruptContext* ctx) {
     inb(0x71);
     
     increase_clock_ticks();
+    schedule(ctx);
 }

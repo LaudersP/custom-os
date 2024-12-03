@@ -245,12 +245,6 @@ void* kmemset(void* dest, const int value, const unsigned count) {
 }
 
 // -------- Paging Code --------
-#define PAGE_DEVICE_MEMORY ( (1<<3) | (1<<4) )
-#define PAGE_PRESENT 1
-#define PAGE_MUST_BE_ONE (1<<7)
-#define PAGE_USER_ACCESS (1<<2)
-#define PAGE_WRITEABLE (1<<1)
-
 static struct PageTable kernelPageTable;
 
 void pagingInit(struct MultibootInfo* info) {
@@ -292,9 +286,11 @@ void pagingInit(struct MultibootInfo* info) {
 }
 
 void setPageTable(struct PageTable* p) {
+    unsigned phys_address = (unsigned)(p->table);
+
     asm volatile( "mov %%eax,%%cr3"
         :
-        : "a"( (unsigned)(p->table) )
+        : "a"(phys_address)
         : "memory" );
 }
 

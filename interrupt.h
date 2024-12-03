@@ -34,6 +34,7 @@ struct LGDT{
 struct InterruptContext{
     // We pushed these in midlevel handler
     u32 eax, ebx, ecx, edx, esi, edi, ebp;
+    u32 ds, es, fs, gs;
     // We pushed this in lowlevel handler
     u32 interruptNumber;
     // CPU pushed these (except maybe errorcode)

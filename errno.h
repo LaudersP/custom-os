@@ -10,3 +10,4 @@
 #define ENODATA -7
 #define ENOEXEC -8
 #define EFAULT -9
+#define EAGAIN -10

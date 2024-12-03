@@ -14,11 +14,26 @@ __asm__(
 #include "timer.h"
 #include "disk.h"
 #include "exec.h"
+#include "sched.h"
 
 struct MultibootInfo machineInfo;
 
-void kmain2() {
-    exec("HELLO.EXE", 0x400000, exec_transfer_control, 0);
+void kmain3(int errorcode, int pid, void* callback_data) {
+    if( errorcode != SUCCESS )
+        panic("Error spawning task!");
+
+    int* countdown = (int*)callback_data;
+    *countdown -= 1;
+    if( *countdown == 0 )
+        scheduleEnable();
+    return;
+}
+
+void kmain2() {        //disk_read_metadata callback
+    static int countdown=3;
+    spawn("A.EXE", kmain3, &countdown);
+    spawn("B.EXE", kmain3, &countdown);
+    spawn("C.EXE", kmain3, &countdown);
 }
 
 void kmain(struct MultibootInfo* mbi) {
@@ -36,6 +51,9 @@ void kmain(struct MultibootInfo* mbi) {
 
     // Enable memory
     memory_init();
+
+    // Enable scheduling
+    scheduleInit();
 
     // Enable paging
     pagingInit(mbi);

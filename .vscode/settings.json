@@ -8,7 +8,8 @@
     "memory.h": "c",
     "linked_list.h": "c",
     "pic.h": "c",
-    "disk.h": "c"
+    "disk.h": "c",
+    "kstrlen.h": "c"
   },
   "cSpell.words": ["kmemcpy"],
   "cSpell.ignoreWords": ["LGDT"]

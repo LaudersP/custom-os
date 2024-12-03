@@ -98,7 +98,9 @@ run( [
     python, "fool.pyz", "hd.img",
         "create", "64",
         "cp", "kernel.exe", "KERNEL.EXE",
-        "cp", "user/hello.exe", "HELLO.EXE"
+        "cp", "user/a.exe", "A.EXE",
+        "cp", "user/b.exe", "B.EXE",
+        "cp", "user/c.exe", "C.EXE",
 ])
 
 # Run Qemu

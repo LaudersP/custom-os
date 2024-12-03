@@ -3,6 +3,11 @@
 #include "utils.h"
 
 #define HEAP_ORDER 19
+#define PAGE_DEVICE_MEMORY ( (1<<3) | (1<<4) )
+#define PAGE_PRESENT 1
+#define PAGE_MUST_BE_ONE (1<<7)
+#define PAGE_USER_ACCESS (1<<2)
+#define PAGE_WRITEABLE (1<<1)
 
 typedef struct Header_{
     u32 used: 1,
