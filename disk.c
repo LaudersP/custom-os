@@ -310,7 +310,7 @@ void parseFilename(struct DirEntry* entry, char* buffer) {
     // Iterate through the file extension
     for(int i = 0; i < 3; i++) {
         // Get the extension character
-        if(entry->ext[i] != '\0' && entry->base[i] != ' ')
+        if(entry->ext[i] != '\0' && entry->ext[i] != ' ')
             buffer[bufferCharCout++] = entry->ext[i];
     }
 
